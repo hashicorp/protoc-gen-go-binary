@@ -1,4 +1,4 @@
-module github.com/mkeeler/protoc-gen-go-binary
+module github.com/hashicorp/protoc-gen-go-binary
 
 go 1.12
 

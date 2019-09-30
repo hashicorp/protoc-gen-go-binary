@@ -15,7 +15,7 @@ to implement the binary marshaling interfaces instead of the JSON ones.
 ## Install
 
 ```
-go get github.com/mkeeler/protoc-gen-go-binary
+go get github.com/hashicorp/protoc-gen-go-binary
 ```
 
 Also required:
