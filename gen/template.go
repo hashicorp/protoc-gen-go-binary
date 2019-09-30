@@ -63,17 +63,20 @@ var (
 
 package {{.GoPkg.Name}}
 
+import (
+	"github.com/golang/protobuf/proto"
+	)
 `))
 
 	messageTemplate = template.Must(template.New("message").Parse(`
 // MarshalBinary implements encoding.BinaryMarshaler
 func (msg *{{.TypeName}}) MarshalBinary() ([]byte,error) {
-	return msg.Marshal()
+	return proto.Marshal(msg)
 }
 
 // UnmarshalBinary implements encoding.BinaryUnmarshaler
 func (msg *{{.TypeName}}) UnmarshalBinary(b []byte) error {
-	return msg.Unmarshal(b)
+	return proto.Unmarshal(b, msg)
 }
 `))
 )

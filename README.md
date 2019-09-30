@@ -21,7 +21,7 @@ go get github.com/mkeeler/protoc-gen-go-binary
 Also required:
 
 - [protoc](https://github.com/google/protobuf)
-- [protoc-gen-gofast](https://github.com/gogo/protobuf)
+- [protoc-gen-go](https://github.com/golang/protobuf)
 
 ## Usage
 
@@ -42,7 +42,7 @@ The example message purposely uses a `oneof` since this won't work by
 default with `encoding/json`. Next, generate the code:
 
 ```
-protoc --gofast_out=. --go-binary_out=. request.proto
+protoc --go_out=. --go-binary_out=. request.proto
 ```
 
 Your output should contain a file `request.pb.binary.go` which contains
