@@ -3,16 +3,11 @@ package main
 import (
 	"flag"
 	"fmt"
-	"os"
-	"strings"
 
 	"github.com/golang/glog"
-	"github.com/golang/protobuf/proto"
-	plugin "github.com/golang/protobuf/protoc-gen-go/plugin"
-	"github.com/grpc-ecosystem/grpc-gateway/codegenerator"
-	"github.com/grpc-ecosystem/grpc-gateway/protoc-gen-grpc-gateway/descriptor"
-
 	"github.com/hashicorp/protoc-gen-go-binary/gen"
+	"google.golang.org/protobuf/compiler/protogen"
+	plugin "google.golang.org/protobuf/types/pluginpb"
 )
 
 var (
@@ -24,105 +19,33 @@ func main() {
 	flag.Parse()
 	defer glog.Flush()
 
-	reg := descriptor.NewRegistry()
+	protogen.Options{
+		ParamFunc: flag.CommandLine.Set,
+	}.Run(func(gp *protogen.Plugin) error {
 
-	glog.V(1).Info("Processing code generator request")
-	f := os.Stdin
-	if *file != "-" {
-		var err error
-		f, err = os.Open(*file)
-		if err != nil {
-			glog.Fatal(err)
-		}
-	}
+		gp.SupportedFeatures = uint64(plugin.CodeGeneratorResponse_FEATURE_PROTO3_OPTIONAL)
 
-	glog.V(1).Info("Parsing code generator request")
-	req, err := codegenerator.ParseRequest(f)
-	if err != nil {
-		glog.Fatal(err)
-	}
+		for _, name := range gp.Request.FileToGenerate {
+			f := gp.FilesByPath[name]
 
-	glog.V(1).Info("Parsed code generator request")
-	pkgMap := make(map[string]string)
-	if req.Parameter != nil {
-		err := parseReqParam(req.GetParameter(), flag.CommandLine, pkgMap)
-		if err != nil {
-			glog.Fatalf("Error parsing flags: %v", err)
-		}
-	}
-
-	reg.SetPrefix(*importPrefix)
-	for k, v := range pkgMap {
-		reg.AddPkgMap(k, v)
-	}
-
-	g := gen.New(reg)
-	if err := reg.Load(req); err != nil {
-		emitError(err)
-		return
-	}
-
-	var targets []*descriptor.File
-	for _, target := range req.FileToGenerate {
-		f, err := reg.LookupFile(target)
-		if err != nil {
-			glog.Fatal(err)
-		}
-		targets = append(targets, f)
-	}
-
-	out, err := g.Generate(targets)
-	glog.V(1).Info("Processed code generator request")
-	if err != nil {
-		emitError(err)
-		return
-	}
-
-	emitFiles(out)
-}
-
-func emitFiles(out []*plugin.CodeGeneratorResponse_File) {
-	emitResp(&plugin.CodeGeneratorResponse{File: out})
-}
-
-func emitError(err error) {
-	emitResp(&plugin.CodeGeneratorResponse{Error: proto.String(err.Error())})
-}
-
-func emitResp(resp *plugin.CodeGeneratorResponse) {
-	buf, err := proto.Marshal(resp)
-	if err != nil {
-		glog.Fatal(err)
-	}
-	if _, err := os.Stdout.Write(buf); err != nil {
-		glog.Fatal(err)
-	}
-}
-
-// parseReqParam parses a CodeGeneratorRequest parameter and adds the
-// extracted values to the given FlagSet and pkgMap. Returns a non-nil
-// error if setting a flag failed.
-func parseReqParam(param string, f *flag.FlagSet, pkgMap map[string]string) error {
-	if param == "" {
-		return nil
-	}
-	for _, p := range strings.Split(param, ",") {
-		spec := strings.SplitN(p, "=", 2)
-		if len(spec) == 1 {
-			err := f.Set(spec[0], "")
-			if err != nil {
-				return fmt.Errorf("Cannot set flag %s: %v", p, err)
+			if len(f.Messages) == 0 {
+				glog.V(1).Infof("Skipping %s, no messages", name)
+				continue
 			}
-			continue
+
+			glog.V(1).Infof("Processing %s", name)
+			glog.V(2).Infof("Generating %s\n", fmt.Sprintf("%s.pb.binary.go", f.GeneratedFilenamePrefix))
+
+			gf := gp.NewGeneratedFile(fmt.Sprintf("%s.pb.binary.go", f.GeneratedFilenamePrefix), f.GoImportPath)
+
+			err := gen.ApplyTemplate(gf, f)
+			if err != nil {
+				gf.Skip()
+				gp.Error(err)
+				continue
+			}
 		}
-		name, value := spec[0], spec[1]
-		if strings.HasPrefix(name, "M") {
-			pkgMap[name[1:]] = value
-			continue
-		}
-		if err := f.Set(name, value); err != nil {
-			return fmt.Errorf("Cannot set flag %s: %v", p, err)
-		}
-	}
-	return nil
+
+		return nil
+	})
 }

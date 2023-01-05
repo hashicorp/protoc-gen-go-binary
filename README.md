@@ -9,8 +9,7 @@ by just calling the `Marshal` and `Unmarshal` functions already generated for th
 This enables Go-generated protobuf messages to be used in situations where the code
 already supports using the binary marshaling interfaces.
 
-Most of the code herein was copied from github.com/mitchellh/protoc-gen-go-json with enough modifications
-to implement the binary marshaling interfaces instead of the JSON ones.
+The code heavily relies on google.golang.org/protobuf/compiler/protogen and is mostly boilerplate. 
 
 ## Install
 
@@ -20,8 +19,8 @@ go get github.com/hashicorp/protoc-gen-go-binary
 
 Also required:
 
-- [protoc](https://github.com/google/protobuf)
-- [protoc-gen-go](https://github.com/golang/protobuf)
+- [buf](https://github.com/bufbuild/buf)
+- [protoc-gen-go](https://github.com/protocolbuffers/protobuf-go)
 
 ## Usage
 

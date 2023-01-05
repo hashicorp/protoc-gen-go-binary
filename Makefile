@@ -1,3 +1,8 @@
 .PHONY: proto
-proto:
-	cd e2e && protoc --gofast_out=. --go-binary_out=logtostderr=true:. e2e.proto
+
+proto: build
+	cd e2e && buf generate
+
+build: 
+	go build .
+	
